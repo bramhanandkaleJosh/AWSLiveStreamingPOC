@@ -2,6 +2,7 @@ package applications;
 
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.kinesisvideo.client.KinesisVideoClient;
+import com.amazonaws.kinesisvideo.client.mediasource.CameraMediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.common.exception.KinesisVideoException;
 import com.amazonaws.kinesisvideo.demoapp.contants.DemoTrackInfos;
 import com.amazonaws.kinesisvideo.internal.client.mediasource.MediaSource;
@@ -10,7 +11,12 @@ import com.amazonaws.kinesisvideo.java.mediasource.file.AudioVideoFileMediaSourc
 import com.amazonaws.kinesisvideo.java.mediasource.file.AudioVideoFileMediaSourceConfiguration;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSource;
 import com.amazonaws.kinesisvideo.java.mediasource.file.ImageFileMediaSourceConfiguration;
+import com.amazonaws.kinesisvideo.producer.StreamInfo;
 import com.amazonaws.regions.Regions;
+import com.github.sarxos.webcam.Webcam;
+import com.github.sarxos.webcam.util.ImageUtils;
+import mediaSources.CameraMediaSource;
+
 import static com.amazonaws.kinesisvideo.util.StreamInfoConstants.ABSOLUTE_TIMECODES;
 
 public class VideoStreamApplication {
@@ -42,7 +48,7 @@ public class VideoStreamApplication {
 
             // create a media source. this class produces the data and pushes it into
             // Kinesis Video Producer lower level components
-            final MediaSource mediaSource = createImageFileMediaSource();
+            final MediaSource mediaSource = createCameraMediaSource();
 
             // Audio/Video sample is available for playback on HLS (Http Live Streaming)
 //            final MediaSource mediaSource = createFileMediaSource();
@@ -56,6 +62,44 @@ public class VideoStreamApplication {
             throw new RuntimeException(e);
         }
     }
+
+    private static MediaSource createCameraMediaSource() {
+
+        Webcam webcam = Webcam.getDefault();
+
+//        byte[] cpd = { 0x01, 0x42, 0x00, 0x20, (byte) 0xff, (byte) 0xe1, 0x00, 0x23, 0x27, 0x42, 0x00, 0x20,
+//                (byte) 0x89, (byte) 0x8b, 0x60, 0x28, 0x02, (byte) 0xdd, (byte) 0x80, (byte) 0x9e, 0x00, 0x00,
+//                0x4e, 0x20, 0x00, 0x0f, 0x42, 0x41, (byte) 0xc0, (byte) 0xc0, 0x01, 0x77, 0x00, 0x00, 0x5d,
+//                (byte) 0xc1, 0x7b, (byte) 0xdf, 0x07, (byte) 0xc2, 0x21, 0x1b, (byte) 0x80, 0x01, 0x00, 0x04,
+//                0x28, (byte) 0xce, 0x1f, 0x20 };
+
+        final byte[] AVCC_EXTRA_DATA = {
+                (byte) 0x01, (byte) 0x42, (byte) 0x00, (byte) 0x1E, (byte) 0xFF, (byte) 0xE1, (byte) 0x00, (byte) 0x22,
+                (byte) 0x27, (byte) 0x42, (byte) 0x00, (byte) 0x1E, (byte) 0x89, (byte) 0x8B, (byte) 0x60, (byte) 0x50,
+                (byte) 0x1E, (byte) 0xD8, (byte) 0x08, (byte) 0x80, (byte) 0x00, (byte) 0x13, (byte) 0x88,
+                (byte) 0x00, (byte) 0x03, (byte) 0xD0, (byte) 0x90, (byte) 0x70, (byte) 0x30, (byte) 0x00, (byte) 0x5D,
+                (byte) 0xC0, (byte) 0x00, (byte) 0x17, (byte) 0x70, (byte) 0x5E, (byte) 0xF7, (byte) 0xC1, (byte) 0xF0,
+                (byte) 0x88, (byte) 0x46, (byte) 0xE0, (byte) 0x01, (byte) 0x00, (byte) 0x04, (byte) 0x28, (byte) 0xCE,
+                (byte) 0x1F, (byte) 0x20};
+
+        final CameraMediaSourceConfiguration configuration =
+                new CameraMediaSourceConfiguration.Builder()
+                        .withFrameRate((int) webcam.getFPS())
+                        .withCameraFacing(1)
+                        .withCameraId("webcam")
+                        .withIsEncoderHardwareAccelerated(false)
+                        .withRetentionPeriodInHours(1)
+                        .withEncodingMimeType(ImageUtils.FORMAT_WBMP)
+                        .withNalAdaptationFlags(StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE)
+                        .withCodecPrivateData(AVCC_EXTRA_DATA)
+                        .build();
+
+        final CameraMediaSource mediaSource = new CameraMediaSource(STREAM_NAME);
+        mediaSource.setUpWebCam(webcam);
+        mediaSource.configure(configuration);
+        return mediaSource;
+    }
+
 
     /**
      * Create a MediaSource based on local sample H.264 frames.
@@ -96,34 +140,5 @@ public class VideoStreamApplication {
 
         return mediaSource;
     }
-
-//    private static MediaSource createCameraMediaSource() {
-//
-//        Webcam webcam = Webcam.getDefault();
-//
-//        byte[] cpd = { 0x01, 0x42, 0x00, 0x20, (byte) 0xff, (byte) 0xe1, 0x00, 0x23, 0x27, 0x42, 0x00, 0x20,
-//                (byte) 0x89, (byte) 0x8b, 0x60, 0x28, 0x02, (byte) 0xdd, (byte) 0x80, (byte) 0x9e, 0x00, 0x00,
-//                0x4e, 0x20, 0x00, 0x0f, 0x42, 0x41, (byte) 0xc0, (byte) 0xc0, 0x01, 0x77, 0x00, 0x00, 0x5d,
-//                (byte) 0xc1, 0x7b, (byte) 0xdf, 0x07, (byte) 0xc2, 0x21, 0x1b, (byte) 0x80, 0x01, 0x00, 0x04,
-//                0x28, (byte) 0xce, 0x1f, 0x20 };
-//
-//        final CameraMediaSourceConfiguration configuration =
-//                new CameraMediaSourceConfiguration.Builder()
-//                        .withFrameRate((int) webcam.getFPS())
-//                        .withCameraFacing(1)
-//                        .withCameraId("/dev/video0")
-//                        .withIsEncoderHardwareAccelerated(false)
-//                        .withRetentionPeriodInHours(1)
-//                        .withEncodingMimeType("video/avc")
-//                        .withNalAdaptationFlags(StreamInfo.NalAdaptationFlags.NAL_ADAPTATION_FLAG_NONE)
-//                        .withCodecPrivateData(cpd)
-//                        .build();
-//
-//        final CameraMediaSource mediaSource = new CameraMediaSource(STREAM_NAME);
-//        mediaSource.setUpWebCam(webcam);
-//        mediaSource.configure(configuration);
-//        return mediaSource;
-//    }
-
 
 }

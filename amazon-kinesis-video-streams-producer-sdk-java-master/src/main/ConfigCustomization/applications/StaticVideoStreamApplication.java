@@ -7,13 +7,9 @@ import com.amazonaws.services.kinesisvideo.model.AckEvent;
 import com.amazonaws.services.kinesisvideo.model.FragmentTimecodeType;
 import com.amazonaws.services.kinesisvideo.model.GetDataEndpointRequest;
 import com.amazonaws.services.kinesisvideo.model.PutMediaRequest;
-import com.github.sarxos.webcam.Webcam;
-import com.github.sarxos.webcam.WebcamResolution;
-import utils.CustomWebCamListener;
 
+import java.io.FileInputStream;
 import java.io.InputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.net.URI;
 import java.time.Instant;
 import java.util.Date;
@@ -46,7 +42,7 @@ public final class StaticVideoStreamApplication {
     private static final String PUT_MEDIA_API = "/putMedia";
 
     /* the name of the stream */
-    private static final String STREAM_NAME = "test_video_stream";
+    private static final String STREAM_NAME = "FaceAndObejctDetectionStream";
 
     /* sample MKV file */
     private static final String MKV_FILE_PATH = "src/main/resources/data/mkv/clusters.mkv";
@@ -80,18 +76,18 @@ public final class StaticVideoStreamApplication {
             final URI uri = URI.create(dataEndpoint + PUT_MEDIA_API);
 
             /* input stream for sample MKV file */
-//            final InputStream inputStream = new FileInputStream(MKV_FILE_PATH);
+            final InputStream inputStream = new FileInputStream(MKV_FILE_PATH);
 
 
             //custom configuration for the webcam generated input stream
-            Webcam w = Webcam.getDefault().getDefault();
-            w.setViewSize(WebcamResolution.VGA.getSize());
+//            Webcam w = Webcam.getDefault().getDefault();
+//            w.setViewSize(WebcamResolution.VGA.getSize());
 
-            ServerSocket ss=new ServerSocket(6666);
-            Socket socket = ss.accept();
-            CustomWebCamListener streamReader = new CustomWebCamListener(socket.getPort(), w, 25, true);
-            streamReader.start();
-            InputStream inputStream = socket.getInputStream();
+//            ServerSocket ss=new ServerSocket(6666);
+//            Socket socket = ss.accept();
+//            CustomWebCamListener streamReader = new CustomWebCamListener(socket.getPort(), w, 25, true);
+//            streamReader.start();
+//            InputStream inputStream = socket.getInputStream();
 
             /* use a latch for main thread to wait for response to complete */
             final CountDownLatch latch = new CountDownLatch(1);
